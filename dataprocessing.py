@@ -149,7 +149,7 @@ def pivot_data(df,bool_year,bool_season,bool_month,bool_weekday,anonomize_date):
 
     df_mod["Datum"]=pd.to_datetime(df_mod['Datum']).dt.strftime("%Y-%m-%d")
     
-    jahresdaten = pd.read_excel('jahr171819_final.xlsx')
+    jahresdaten = pd.read_excel('resources/jahr171819_final.xlsx')
     jahresdaten['Datum']=jahresdaten['Datum'].dt.strftime("%Y-%m-%d")
     #print(type(jahresdaten['Datum']))
     jahresdaten=jahresdaten.set_index('Datum')

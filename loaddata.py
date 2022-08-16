@@ -2,7 +2,7 @@ import dataprocessing as dp
 import pandas as pd
 
 def load_stations():
-    stationen = pd.read_csv('Stationen.csv',delimiter=';')
+    stationen = pd.read_csv('resources/Stationen.csv',delimiter=';')
     jahreszeiten=['Winter','Sommer','Uebergang']
     tab_seasons=pd.DataFrame({'Monat': range(1,13), 'Jahreszeit': [0,0,0,1,1,2,2,2,1,1,0,0]})
     zeiten=pd.DataFrame(pd.date_range(start='1/1/2018', periods=96, freq='15T').time)
@@ -39,7 +39,7 @@ def load_data_from_measurements(ind_of_import: list, d=False, yd=False, ysd=Fals
         filename='Lastgang Strom Station ' + stationen.loc[:,'Name'].iloc[i] + '.xlsx'
         print('Lade Daten von Station ', stationen.loc[:,'Name'].iloc[i])
 
-        df = pd.read_excel(filename)
+        df = pd.read_excel('resources/' + filename)
         df = dp.interpolate_data(df)
 
         if d:

@@ -346,7 +346,7 @@ def build_example_year(load_profile,coeff_regression_energy,plots=False):
     #load_example_year: Jahres-Lastgang der Laenge 96*365=35040
     
     #Importiere Zuordnung von Wochentagen und Jahreszeiten
-    example_year = pd.read_excel('bspjahr.xlsx')
+    example_year = pd.read_excel('rescources/bspjahr.xlsx')
 
     #Importiere Dictionary
     season_dict, weekday_dict = loaddata.dicts_season_weekday()

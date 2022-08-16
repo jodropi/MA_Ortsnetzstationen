@@ -87,7 +87,7 @@ class StochasticLoadModel:
 
         print('>>> SIMULATION GESTARTET...')
         
-        example_year_meta = pd.read_excel(daytypes_by_file)
+        example_year_meta = pd.read_excel('resources/' + daytypes_by_file)
         results_power = np.zeros([self.n_steps*self.n_days,n_runs])
         before_values = np.zeros(self.order_markov)
 
@@ -228,7 +228,7 @@ class StochasticLoadModel:
         #factors_weekdays_1  = self.rescale_parameters[8][1]
         #factors_weekdays_2  = self.rescale_parameters[8][2]
         
-        example_year = pd.read_excel('bspjahr.xlsx')
+        example_year = pd.read_excel('resources/bspjahr.xlsx')
 
         """
         energy_simulation = np.zeros(n_runs)
@@ -440,7 +440,7 @@ class StochasticSimulationResult:
         if not normed_analysis:
             print('Jahresenergieverbrauch der Messdaten:', mess_verbrauch, ' kWh')
 
-        bspjahr = pd.read_excel('bspjahr.xlsx')
+        bspjahr = pd.read_excel('resources/bspjahr.xlsx')
         
         ####Tagesverlauf von Mittelwert und Std.
 
@@ -692,7 +692,6 @@ class StochasticSimulationResult:
                 ax2.set_xlabel('Zeit [h]')
                 ax2.set_xticks(np.arange(0,108, step=12),np.arange(0,25, step=3))
 
-                            
                 if random_plots:
                     zufallstag=np.random.randint(0,365)
                     anzahl_zufall = 5
