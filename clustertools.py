@@ -1,15 +1,9 @@
-from distutils.log import error
 import numpy as np
-import pandas as pd
 import matplotlib.pyplot as plt
 import loaddata
-import math
-from scipy.stats import norm
-from scipy import stats
+import pandas as pd
 from scipy.cluster.hierarchy import dendrogram, set_link_color_palette
-from datetime import datetime, timedelta
 from sklearn.cluster import AgglomerativeClustering
-from sklearn.mixture import GaussianMixture
 from sklearn.metrics import davies_bouldin_score
 
 def distance(x,y):
@@ -23,6 +17,27 @@ def distance_matrix(partition):
             mat[i,j]=distance(partition[:,i],partition[:,j])
     return mat
 
+
+def CDI(df,label):
+    n_clusters=int(np.max(label)+1)
+    n_data = np.shape(df)[1]
+    n_steps = np.shape(df)[0]
+    centroids = np.zeros([n_steps, n_clusters])
+    distances = np.zeros(n_clusters)
+    sum_clusters = 0
+    for i in range(0,n_clusters):
+        ind=np.zeros(0,int)
+        for j in range(0,n_data):
+            if label[j]==i:
+                ind=np.append(ind,j)
+        cluster = df[:,ind]
+        centroids[:,i] = np.mean(cluster, axis = 1)
+        distances[i] = infrasetdist(cluster)
+    sum_clusters = np.sum(distances**2)
+    isd_centroids = infrasetdist(centroids)        
+    return 1/isd_centroids*np.sqrt(1/n_clusters*sum_clusters)
+
+"""
 def CDI(centroids,df,label):
     n_clusters=np.shape(centroids)[1]
     sum_clusters = 0
@@ -38,7 +53,8 @@ def CDI(centroids,df,label):
         print('Problem')
     
     return 1/infrasetdist(centroids)*np.sqrt(1/n_clusters*sum_clusters)
-    
+"""
+
 def infrasetdist(set_time_series):
     N=np.shape(set_time_series)[1]
     distance_mat=distance_matrix(set_time_series)
@@ -61,8 +77,6 @@ def build_winter_summer_week_profile(list_mat_power_d, n_steps = 96):
 
         df_to_cluster[i,:]=np.append(D,E)
         df_to_cluster[i,:]=(df_to_cluster[i,:]-np.min(df_to_cluster[i,:]))/(np.max(df_to_cluster[i,:])-np.min(df_to_cluster[i,:]))              #Min-Max-Normalisierung
-    
-
     return df_to_cluster
 
 def plot_dendrogram(model, **kwargs):
@@ -83,77 +97,59 @@ def plot_dendrogram(model, **kwargs):
     linkage_matrix = np.column_stack(
         [model.children_, model.distances_, counts]
     ).astype(float)
-    # set_link_color_palette(['g', 'r', 'c', 'm', 'y', 'k'])
+    set_link_color_palette(['tab:blue', 'tab:blue', 'tab:blue', 'tab:blue', 'tab:blue', 'tab:blue','tab:blue'])
     # Plot the corresponding dendrogram
     dendrogram(linkage_matrix,**kwargs)
 
 def analyze_cluster_indicators(df, plot_Dendrogramm = True, plot_CDI = True, plot_DBI = False, export_plots=False):
-
     DBI_mat = np.zeros(8)
     CDI_mat = np.zeros(8)
     list_models=list()
     for n in range(2,9):
         X=df
         Y=X.T
-        
         mymodel_n = AgglomerativeClustering(n_clusters=n,compute_distances=True)
         mymodel_n = mymodel_n.fit(X)
 
-        centroids = np.zeros([2*288,n])
+        #centroids = np.zeros([2*288,n])
         label=mymodel_n.labels_
-        #differenz=np.diff(mymodel_n.distances_)
-        #plt.figure()
-        #plt.plot(np.arange(9,1,-1), mymodel_n.distances_)
-        #print(mymodel_n.distances_)
-        #plt.figure()
-        
-        for i in range(0,n):
-            ind=np.zeros(0,int)
-            for j in range(0,9):
-                if label[j]==i:
-                    ind=np.append(ind,j)
-            centroids[:,i]=np.mean(Y[:,ind],axis=1)
 
         list_models.insert(len(list_models),mymodel_n)
-
+        
         DBI_mat[n-2] = davies_bouldin_score(X, label)
-        CDI_mat[n-2] = CDI(centroids,Y,label)
+        CDI_mat[n-2] = CDI(Y, label)
     
     if plot_Dendrogramm:
         plot_dendrogram(list_models[0],truncate_mode="level", p=5, labels=['A','B','C','D','E','F','G','H','I'])
+        plt.axhline(y=4.80558049,linestyle='dashed')
+        plt.xlabel('Ortsnetzstationen')
+        plt.ylabel('Distanz im Cluster')
+        plt.text(25,5,'5 Cluster',horizontalalignment='center')
         if export_plots:
             plt.savefig('export/Dendrogramm_Alle.pdf',bbox_inches='tight')
-    """
-    subfig, axs = plt.subplots(1,2,figsize=(12.8,4.8))
-    
-    no=0
-    axs[no].plot(np.linspace(2,9,8),DBI_mat)
-    axs[no].set_xlabel('Anzahl von Clustern')
-    axs[no].set_ylabel('DBI')
 
-    no=1
-    axs[no].plot(np.linspace(2,9,8),CDI_mat)
-    axs[no].set_xlabel('Anzahl von Clustern')
-    axs[no].set_ylabel('CDI')
-    """
     if plot_CDI:
         plt.figure()
         plt.plot(np.linspace(2,9,8),CDI_mat)
         plt.xlabel('Anzahl von Clustern')
         plt.ylabel('CDI')
+        plt.xticks(np.arange(0,10))
+        plt.grid()
 
     if plot_DBI:
         plt.figure()
         plt.plot(np.linspace(2,9,8),DBI_mat)
         plt.xlabel('Anzahl von Clustern')
         plt.ylabel('DBI')
+        plt.xticks(np.arange(0,10))
+        plt.grid()
 
 def plot_week_profiles_cluster(df,cluster_label):
     dictionarystations=loaddata.dict_station()
     n_clusters = int(cluster_label.max()+1)
     n_stations = 9
 
-    cluster_no=['2', '5', '1', '3', '4']
+    cluster_no=['1', '5', '2', '3', '4']
 
     for i in range(0,n_clusters):
         ind=np.zeros(0,int)

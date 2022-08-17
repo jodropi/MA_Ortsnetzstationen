@@ -1,6 +1,4 @@
 ###IMPORT
-#from calendar import week
-from multiprocessing.pool import MapResult
 import numpy as np
 import pandas as pd
 import seaborn as sns
@@ -94,7 +92,7 @@ class StochasticLoadModel:
         for it in range(0,n_runs):
             print('>>> Starte Markov-Ketten-Simulation - Iteration ' + str(it))
             simulated_power = np.zeros(self.n_steps*self.n_days)
-            Y=1
+            
             for day in range(0,self.n_days):
                 print('Tag', day)
                 i_begin = day*self.n_steps
@@ -103,56 +101,6 @@ class StochasticLoadModel:
                 tm_day=self.transitionmatrices[season,weekday]
                 bins_day=self.bins[season,weekday]
                 simulated_power[i_begin:i_begin+self.n_steps], before_values = build_randomwalk(tm_day, bins_day, self.n_states, self.n_steps, before_values, weekday, season, self.gmm, 4)
-                """
-                #mwalt=[0.46790945, 0.32778339, 0.24778745]
-                mwalt=[1,  0.75721947, 0.81559406]
-                mw=[mwalt[0]/mwalt[1], 1, mwalt[2]/mwalt[1]]
-                print(mw)
-                
-                if day>=79 and day <= 133 and self.normalization[1]==1:
-                    if day == 79:
-                        #print('scale')
-                        count = 0
-                        #mw=[0.55451309, 0.47567961, 0.45054441]
-                        pquer=mw[1]
-                        pvor=mw[0]
-                        pnach=mw[2]
-                        pdelta=pnach-pvor
-                        d=55
-
-                        a=pdelta/d
-                        b=pvor
-
-                        mypoly=np.poly1d([a,b])
-                        X=np.linspace(0,55,56)
-                        Y=mypoly(X)/pquer
-                        #print(Y)
-                    #print(day)
-                    simulated_power[i_begin:i_begin+self.n_steps]=simulated_power[i_begin:i_begin+self.n_steps]*Y[count]
-                    count = count+1
-                elif day>=257 and day <= 303 and self.normalization[1]==1:
-                    if day == 257:
-                        #print('scale')
-                        count = 0
-                        #mw=[0.55451309, 0.47567961, 0.45054441]
-                        pquer=mw[1]
-                        pvor=mw[2]
-                        pnach=mw[0]
-                        pdelta=pnach-pvor
-                        d=47
-
-                        a=pdelta/d
-                        b=pvor
-
-                        mypoly=np.poly1d([a,b])
-                        X=np.linspace(0,47,48)
-                        Y=mypoly(X)/pquer
-                    print(day)
-                    simulated_power[i_begin:i_begin+self.n_steps]=simulated_power[i_begin:i_begin+self.n_steps]*Y[count]
-                    count = count+1
-                else:
-                    Y=1
-                """
             results_power[:, it] = simulated_power
 
         if self.normalization[0] == 0:
@@ -182,8 +130,6 @@ class StochasticLoadModel:
                 plt.plot(X,RMSE_mat,label='season = ' + str(season) + ', weekday = ' + str(weekday) )
         leg = plt.legend()
 
-
-
     def denormalize(self, result, energy=0, new_case_4=-1, max_value=0):
         simulation_matrix = np.copy(result.result_matrix)
 
@@ -205,9 +151,6 @@ class StochasticLoadModel:
 
         energy_per_year     = self.rescale_parameters[0]
         extreme_values_data = self.rescale_parameters[6]
-        #min_vec            = self.rescale_parameters[2][0]
-        #mean_vec           = self.rescale_parameters[2][1]
-        #max_vec            = self.rescale_parameters[2][2]
 
         c_min               = self.rescale_parameters[1][0]
         c_max               = self.rescale_parameters[1][2]
@@ -224,24 +167,13 @@ class StochasticLoadModel:
 
         factors_weekday     = self.rescale_parameters[8]
         std_weekday     = self.rescale_parameters[9]
+
         #factors_weekdays_0  = self.rescale_parameters[8][0]
         #factors_weekdays_1  = self.rescale_parameters[8][1]
         #factors_weekdays_2  = self.rescale_parameters[8][2]
         
         example_year = pd.read_excel('resources/bspjahr.xlsx')
 
-        """
-        energy_simulation = np.zeros(n_runs)
-        for it in range(0,n_runs):
-            energy_simulation[it] = 0.25*np.sum(simulation_matrix[:,it])
-        print(energy_simulation)
-        energy_factor = energy_simulation/energy
-        print(energy_factor)
-        for it in range(0,n_runs):
-            simulation_matrix[:,it] = simulation_matrix[:,it]*energy_factor[it]
-        """
-
-        #print('c_min', str(c_min), 'c_max', str(c_max))
         #print('Normierung:', case_1, ', Lokal/Global:', case_2, ', Grenzen:', case_3)
         extended_matrix=np.zeros([self.n_days*self.n_steps,n_runs])
         p_bar = energy_per_year/(self.n_days*24)
@@ -274,10 +206,6 @@ class StochasticLoadModel:
                         if case_4 == 0:
                             scaled_wide_matrix[day,:]=mean_vec[day]*p_bar*(wide_matrix[day,:]*(c_max-c_min)+c_min)
                         elif case_4 == 1 or case_4 == 3:
-                            #scaled_wide_matrix[day,:]=mean_vec[day]*(wide_matrix[day,:]*(c_max-c_min)+c_min)
-                            #min_factor = np.random.normal(c_min,std_min)
-                            #scaled_wide_matrix[day,:]=mean_vec[day]*(wide_matrix[day,:]*(np.random.normal(c_max,std_max)-min_factor)+min_factor)
-                            #scaled_wide_matrix[day,:]=(wide_matrix[day,:]*(max_vec[day]-min_vec[day])+min_vec[day])
                             scaled_wide_matrix[day,:]=(wide_matrix[day,:]*(max_vec.mean()-min_vec.mean())+min_vec.mean())
                         elif case_4 == 2:
                             scaled_wide_matrix[day,:]=(wide_matrix[day,:]*(true_max_vec[day]-true_min_vec[day])+true_min_vec[day])
@@ -314,17 +242,15 @@ class StochasticLoadModel:
             for it in range(0,n_runs):
                 wide_matrix=np.reshape(simulation_matrix[:,it],[self.n_days,self.n_steps])
                 scaled_wide_matrix = np.zeros([self.n_days,self.n_steps])
-                #for day in range(0,n_days):
-                    #scaled_wide_matrix[day,:]=model_std[day]*wide_matrix[day,:]+model_mean[day]
                 extended_matrix[:,it]=np.reshape(scaled_wide_matrix,n_steps_total)
-
-        print('Simulation skaliert!')
 
         for it in range(0,n_runs):
             energy_of_the_iteration = calc_energy(extended_matrix[:,it])
             extended_matrix[:,it] = extended_matrix[:,it]*energy/energy_of_the_iteration
 
         denormalized_result = StochasticSimulationResult(self, extended_matrix, scaled_bins, n_runs, normed = False)
+        
+        print('>>> Simulation erfolgreich denormalisiert!')
 
         return denormalized_result
 

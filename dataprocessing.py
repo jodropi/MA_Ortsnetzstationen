@@ -4,11 +4,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import loaddata
 import math
-from scipy.stats import norm
 from scipy import stats
 from datetime import datetime, timedelta
-from sklearn.cluster import AgglomerativeClustering
-from sklearn.mixture import GaussianMixture
 
 def MPE(x,xref):
     n=x.shape[0]
@@ -376,47 +373,4 @@ def stochastic_analysis(df,varianzkoeff=False):
         if varianzkoeff:
             axs[2].set_ylim([np.min(min_vk)*0.9,np.max(max_vk)*1.1])
     plt.subplots_adjust(hspace=0.5)
-    """
-    subfig, axs = plt.subplots(1, 3,figsize=(24,4.8))
-    spalte=0
-
-    weekday=0
-    for season in range(0,3):
-        this_df=df.loc[:,season].loc[:,weekday]
-        this_df_mean=this_df.mean(axis=1).to_numpy()
-        this_df_std=this_df.std(axis=1).to_numpy()
-        this_df_factor=this_df_std/this_df_mean
-        max_mean[count]=np.max(this_df_mean)
-        min_mean[count]=np.min(this_df_mean)
-        max_std[count]=np.max(this_df_std)
-        min_std[count]=np.min(this_df_std)
-        max_vk[count]=np.max(this_df_factor)
-        min_vk[count]=np.min(this_df_factor)
-        axs[spalte].plot(this_df_mean)
-        axs[spalte].set_title('Mittelwert im Tagesverlauf am Tag ' + dict_weekday[weekday])
-        axs[spalte].legend(['Winter','Übergangszeit','Sommer'])
-        axs[spalte].set_xlabel('Zeit [h]')
-        axs[spalte].set_xticks(np.arange(0,108, step=12),np.arange(0,25, step=3))
-        axs[spalte].set_ylabel('Leistung [kW]')
-        axs[spalte].grid()
-        spalte=spalte+1
-        axs[spalte].plot(this_df_std)
-        axs[spalte].set_title('Standardabweichung im Tagesverlauf am Tag ' + dict_weekday[weekday])
-        axs[spalte].legend(['Winter','Übergangszeit','Sommer'])
-        axs[spalte].set_ylabel('Leistung [kW]')
-        axs[spalte].set_xlabel('Zeit [h]')
-        axs[spalte].set_xticks(np.arange(0,108, step=12),np.arange(0,25, step=3))
-        axs[spalte].grid()
-        spalte=spalte+1        
-        axs[spalte].plot(this_df_factor)
-        axs[spalte].set_title('Variationskoeffizient im Tagesverlauf am Tag ' + dict_weekday[weekday])
-        axs[spalte].legend(['Winter','Übergangszeit','Sommer'])
-        axs[spalte].set_ylabel('Variationskoeffizient')
-        axs[spalte].set_xlabel('Zeit [h]')
-        axs[spalte].set_xticks(np.arange(0,108, step=12),np.arange(0,25, step=3))
-        axs[spalte].grid()
-
-
-    plt.subplots_adjust(hspace=0.3)
-    """
     return vk_mat

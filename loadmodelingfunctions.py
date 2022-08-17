@@ -346,7 +346,7 @@ def build_example_year(load_profile,coeff_regression_energy,plots=False):
     #load_example_year: Jahres-Lastgang der Laenge 96*365=35040
     
     #Importiere Zuordnung von Wochentagen und Jahreszeiten
-    example_year = pd.read_excel('rescources/bspjahr.xlsx')
+    example_year = pd.read_excel('resources/Bspjahr.xlsx')
 
     #Importiere Dictionary
     season_dict, weekday_dict = loaddata.dicts_season_weekday()
@@ -454,7 +454,7 @@ def visualize_typedays(profil, name, export_plots = False, filename=''):
         season_count = season_count+1
         plt.subplots_adjust(hspace=0.3)
     if export_plots:
-        plt.savefig('3x2_plot_' + filename + '.pdf',bbox_inches='tight')
+        plt.savefig('export/3x2_plot_' + filename + '.pdf',bbox_inches='tight')
 
 def mape_simulation(arr_simulation,in_measure):
     n = arr_simulation.shape[0]
