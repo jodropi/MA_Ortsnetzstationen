@@ -65,6 +65,7 @@ def load_data_from_measurements(ind_of_import: list, d=False, yd=False, ysd=Fals
             list_power_yswd.insert(len(list_power_yswd),power_data_pivot_year_season_weekday_day)
 
 
+
     
     return list_power_d, list_power_yd, list_power_ysd, list_power_ymd, list_mat_power_d, list_power_ywd, list_power_yswd, list_power_only_d
 

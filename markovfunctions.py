@@ -237,7 +237,6 @@ def build_randomwalk(transitionmatrix_list,bins,n_states,n_steps,last_values_bef
             before_state=before_state
         else:
             distance_to_possible_states = np.abs(start_state_indizes-before_state)
-            #print(distance_to_possible_states, ',', start_state_indizes)
             before_state = start_state_indizes[np.argmin(distance_to_possible_states)]
             print('Vorgaenger-Leistung nicht zulaessig! Neuer Vorgaenger-Zustand:', before_state)
         
@@ -248,7 +247,6 @@ def build_randomwalk(transitionmatrix_list,bins,n_states,n_steps,last_values_bef
         ##################################################################
         for step in range(0,n_steps-1):
             transitionmatrix=transitionmatrix_list[step]
-            #print(step,':',transitionmatrix[random_walk[step],:],',', np.sum(transitionmatrix[random_walk[step],:]))
             random_walk[step+1]=np.random.choice(n_states,1,p=transitionmatrix[random_walk[step]])
         
         for i in range(0,n_steps):
@@ -258,12 +256,9 @@ def build_randomwalk(transitionmatrix_list,bins,n_states,n_steps,last_values_bef
             else:
                 this_gmm=gmm
             random_power[i]=calc_random_gmm_bins(this_gmm,gmm_n_components,this_bins[random_walk[i]],this_bins[random_walk[i]+1])   
-            #random_power[i]=random_in_interval(gmm,this_bins[random_walk[i]],this_bins[random_walk[i]+1])                    
-            #random_power[i]=np.random.random()*(this_bins[random_walk[i]+1]-this_bins[random_walk[i]])+this_bins[random_walk[i]]
 
         return random_power, [random_power[n_steps-1]]
     elif order == 2:
-        #print('Starte Random-Walk an Tag', weekday, ' in Jahreszeit', season, ' mit Vorgaenger-Leistung', last_values_before)
         random_walk=np.zeros([n_steps],int)
         random_power=np.zeros([n_steps])
         trans=np.zeros([1,n_states])
@@ -283,13 +278,11 @@ def build_randomwalk(transitionmatrix_list,bins,n_states,n_steps,last_values_bef
         start_before_indizes_2=np.zeros(0, int)
         for i in range(0,n_states**order):
             if sum_start_states[i] > 0:
-                #print(str(int(i/n_states)), ', ', str(i%n_states), ':', transitionmatrix_list[95][i,:])
-                #print('i = ', i, 'before = ', int(i/n_states), 'start = ', i%n_states)
                 trans=np.append(trans,[transitionmatrix_list[95][i,:]],axis=0)
                 start_before_indizes_1=np.append(start_before_indizes_1, [int(i/n_states)])
                 start_before_indizes_2=np.append(start_before_indizes_2, [i%n_states])
         anz=start_before_indizes_1.shape[0]
-        #print(start_before_indizes_1, start_before_indizes_2)
+        
         #Ist die Vorgabe zulaessig?
 
         if last_states_before[0] in start_before_indizes_1:
@@ -298,14 +291,9 @@ def build_randomwalk(transitionmatrix_list,bins,n_states,n_steps,last_values_bef
                 if start_before_indizes_1[i]==last_states_before[0]:
                     combination = np.append(combination,start_before_indizes_2[i])
             if last_states_before[1] in combination:
-                #print(last_states_before, start_before_indizes_1, start_before_indizes_2)
                 last_states = last_states_before
                 print('Vorgaenger-Leistung unveraendert')
             else:
-                #combination = np.zeros(0,int)
-                #for i in range(0,anz):
-                #    if start_before_indizes_1[i]==last_states_before[0]:
-                #        combination = np.append(combination,start_before_indizes_2[i])
                 last_states = [last_states_before[0], np.random.choice(combination,1)[0]]
                 print('Vorgaenger-Leistung -1 veraendert')
         else:
@@ -325,11 +313,9 @@ def build_randomwalk(transitionmatrix_list,bins,n_states,n_steps,last_values_bef
 
         transitionmatrix=transitionmatrix_list[95]
         ind=int(last_states[0]*n_states+last_states[1])
-        #print(weekday, season, ',', last_states, ',', transitionmatrix[ind])
         if np.sum(transitionmatrix[ind])<= 0.95:
             print(weekday, season, ',', last_states, ',', transitionmatrix[ind])
             print(start_before_indizes_1, start_before_indizes_2)
-            #display(pd.DataFrame(trans))
         random_walk[0] = np.random.choice(n_states,1,p=transitionmatrix[ind])
         transitionmatrix=transitionmatrix_list[0]
         ind=int(last_states[1]*n_states+random_walk[0])
@@ -337,13 +323,10 @@ def build_randomwalk(transitionmatrix_list,bins,n_states,n_steps,last_values_bef
 
         for step in range(1,n_steps-1):
             transitionmatrix=transitionmatrix_list[step]
-            #print(step,':',transitionmatrix[random_walk[step],:],',', np.sum(transitionmatrix[random_walk[step],:]))
             random_walk[step+1]=np.random.choice(n_states,1,p=transitionmatrix[random_walk[(step-1)%n_steps]*n_states+random_walk[step]])
-            #i=random_walk[step+1]   
-        
+            
         for i in range(0,n_steps):
-            random_power[i]=calc_random_gmm_bins(gmm,gmm_n_components,bins[random_walk[i]],bins[random_walk[i]+1])                        
-            #random_power[i]=np.random.random()*(bins[random_walk[i]+1]-bins[random_walk[i]])+bins[random_walk[i]]
+            random_power[i]=calc_random_gmm_bins(gmm,gmm_n_components,bins[random_walk[i]],bins[random_walk[i]+1])  
         return random_power, random_power[n_steps-2:n_steps]
     else:
         return random_power, [0]
