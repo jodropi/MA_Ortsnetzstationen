@@ -94,3 +94,13 @@ def dict_station():
         8: 'I'
     }
     return dictionarystations
+    
+def dict_groups():
+    dictionarygroups = {
+        'S':  0,
+        'W1': 1,
+        'W2': 2,
+        'W3': 3,
+        'W4': 4
+    }
+    return dictionarygroups

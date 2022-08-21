@@ -174,6 +174,6 @@ def plot_week_profiles_cluster(df,cluster_label):
         plt.ylabel('Min-Max-normierte Leistung')
         plt.xlim([0,576])
         plt.grid()
-        plt.title('Cluster ' + cluster_no[i])
+        #plt.title('Cluster ' + cluster_no[i])
         leg = plt.legend()
         plt.savefig('export/Wochenlastgang_Cluster_' + cluster_no[i] + '.pdf', bbox_inches = 'tight')

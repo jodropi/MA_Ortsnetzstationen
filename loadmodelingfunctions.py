@@ -96,6 +96,7 @@ def calc_regression_polynoms(data_in,data_weekday_in,deg,case_normierung,plots=F
     std_max=np.std(diff_max)
 
     Y_faktor_max=Ymax/Ymean
+    Y_faktor_mean=Ymean/Ymean
     Y_faktor_min=Ymin/Ymean
 
     if case_4==0:
@@ -130,8 +131,10 @@ def calc_regression_polynoms(data_in,data_weekday_in,deg,case_normierung,plots=F
         mean_vec=mymodel_mean(X)/np.mean(mymodel_mean(X))
     elif case_4==1:
         mean_vec=mymodel_mean(X)
-
-    mean_vec=Ymean
+    elif case_4==2:
+        mean_vec=mymodel_mean(X)/np.mean(mymodel_mean(X))
+    else:
+        mean_vec=Ymean
 
     extreme_vec = [min_vec, mean_vec, max_vec]
     
