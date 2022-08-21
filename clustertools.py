@@ -37,24 +37,6 @@ def CDI(df,label):
     isd_centroids = infrasetdist(centroids)        
     return 1/isd_centroids*np.sqrt(1/n_clusters*sum_clusters)
 
-"""
-def CDI(centroids,df,label):
-    n_clusters=np.shape(centroids)[1]
-    sum_clusters = 0
-    for i in range(0,n_clusters):
-        ind=np.zeros(0,int)
-        for j in range(0,9):
-            if label[j]==i:
-                ind=np.append(ind,j)
-        sum_clusters = sum_clusters+infrasetdist(df[:,ind])**2
-    D=infrasetdist(centroids)
-    
-    if D == 0:
-        print('Problem')
-    
-    return 1/infrasetdist(centroids)*np.sqrt(1/n_clusters*sum_clusters)
-"""
-
 def infrasetdist(set_time_series):
     N=np.shape(set_time_series)[1]
     distance_mat=distance_matrix(set_time_series)
@@ -111,7 +93,6 @@ def analyze_cluster_indicators(df, plot_Dendrogramm = True, plot_CDI = True, plo
         mymodel_n = AgglomerativeClustering(n_clusters=n,compute_distances=True)
         mymodel_n = mymodel_n.fit(X)
 
-        #centroids = np.zeros([2*288,n])
         label=mymodel_n.labels_
 
         list_models.insert(len(list_models),mymodel_n)
@@ -174,6 +155,6 @@ def plot_week_profiles_cluster(df,cluster_label):
         plt.ylabel('Min-Max-normierte Leistung')
         plt.xlim([0,576])
         plt.grid()
-        #plt.title('Cluster ' + cluster_no[i])
+        plt.title('Cluster ' + cluster_no[i])
         leg = plt.legend()
         plt.savefig('export/Wochenlastgang_Cluster_' + cluster_no[i] + '.pdf', bbox_inches = 'tight')

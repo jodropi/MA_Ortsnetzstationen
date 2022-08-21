@@ -1,4 +1,3 @@
-from distutils.log import error
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -45,9 +44,6 @@ def data_visualisation(data,normierung=0,mean=False,std=False,allinone=False):
                     axs[0,season].set_title('Jahreszeit ' + str(season))
                     axs[1,day].plot(df.to_numpy())
                     axs[1,day].set_title('Wochentag ' + str(day))
-                #if !mean or std:
-                #    axs[season,day].plot(df.to_numpy())
-                #    axs[season,day].set_title('Jahreszeit ' + str(season) + ' , Wochentag ' + str(day))
 
 def normalize_dataframe(df,axis=0,global_norm=False):
     if isinstance(df,np.ndarray):
@@ -115,7 +111,6 @@ def pivot_data(df,bool_year,bool_season,bool_month,bool_weekday,anonomize_date):
     n = df.shape[0]
 
     #Fuege Wochentag und Monat hinzu.
-    #df["Wochentag"]=df["Datum/Uhrzeit"].dt.dayofweek
     df["Monat"]=df["Datum/Uhrzeit"].dt.month
     df['Monat']=df['Monat'].astype(int)
     df["Jahr"]=df["Datum/Uhrzeit"].dt.year
@@ -134,8 +129,6 @@ def pivot_data(df,bool_year,bool_season,bool_month,bool_weekday,anonomize_date):
     ende = i
 
     df_mod=df[start:ende+1]
-
-    #df_mod.loc[df_mod['Wochentag']<=4,'Wochentag'] = 0                       #Mo - Fr -> 0
 
     #Einheitliche 15 Minuten Abtastzeiten    
     df_mod=df_mod.resample('15T',on='Datum/Uhrzeit').mean()
@@ -170,9 +163,7 @@ def pivot_data(df,bool_year,bool_season,bool_month,bool_weekday,anonomize_date):
         col.insert(len(col),'Wochentag')
     col.insert(len(col),'Datum')
     df_pivot = pd.pivot_table(df_mod,values='Leistung',index='Zeit',columns=col,aggfunc=np.mean)
-    
-    #df_pivot = pd.pivot_table(df_mod,values=['A-1-träge-max (L1)','A-2-träge-max (L2)','A-3-träge-max (L3)'],index='Zeit',columns=col,aggfunc=np.mean)
-    
+        
     return df_pivot
 
 def norm_data_for_simulation(data_in, case_standardisation):
@@ -280,19 +271,7 @@ def stochastic_analysis(df,varianzkoeff=False):
     #df: DataFrame mit Spalten Jahreszeit, Wochentag, Datum
 
     dict_season, dict_weekday = loaddata.dicts_season_weekday()
-    """
-    for season in range(0,3):
-        plt.figure()
-        subfig, axs = plt.subplots(2, 3,figsize=(24,9.6))
-        for weekday in range(0,3):
-            this_df=df.loc[:,season].loc[:,weekday]
-            this_df_mean=this_df.mean(axis=1).to_numpy()
-            this_df_std=this_df.std(axis=1).to_numpy()
-            axs[0,weekday].plot(this_df_mean)
-            axs[0,weekday].set_title('Mittelwert - Jahreszeit ' + dict_season[season] + ', Wochentag ' + dict_weekday[weekday])
-            axs[1,weekday].plot(this_df_std)
-            axs[1,weekday].set_title('Standardabweichung - Jahreszeit ' + dict_season[season] + ', Wochentag ' + dict_weekday[weekday])
-    """
+    
     if varianzkoeff:
         subfig, axs = plt.subplots(3, 1,figsize=(6.8,14.4))
     else:
@@ -319,30 +298,7 @@ def stochastic_analysis(df,varianzkoeff=False):
             min_std[count]=np.min(this_df_std)
             max_vk[count]=np.max(this_df_factor)
             min_vk[count]=np.min(this_df_factor)
-            """
-            axs[0,weekday].plot(this_df_mean)
-            axs[0,weekday].set_title('Mittelwert im Tagesverlauf am Tag ' + dict_weekday[weekday])
-            axs[0,weekday].legend(['Winter','Übergangszeit','Sommer'])
-            axs[0,weekday].set_xlabel('Zeit [h]')
-            axs[0,weekday].set_xticks(np.arange(0,108, step=12),np.arange(0,25, step=3))
-            axs[0,weekday].set_ylabel('Leistung [kW]')
-            axs[0,weekday].grid()
-            axs[1,weekday].plot(this_df_std)
-            axs[1,weekday].set_title('Standardabweichung im Tagesverlauf am Tag ' + dict_weekday[weekday])
-            axs[1,weekday].legend(['Winter','Übergangszeit','Sommer'])
-            axs[1,weekday].set_ylabel('Leistung [kW]')
-            axs[1,weekday].set_xlabel('Zeit [h]')
-            axs[1,weekday].set_xticks(np.arange(0,108, step=12),np.arange(0,25, step=3))
-            axs[1,weekday].grid()
-            if varianzkoeff:
-                axs[2,weekday].plot(this_df_factor)
-                axs[2,weekday].set_title('Variationskoeffizient im Tagesverlauf am Tag ' + dict_weekday[weekday])
-                axs[2,weekday].legend(['Winter','Übergangszeit','Sommer'])
-                axs[2,weekday].set_ylabel('Variationskoeffizient')
-                axs[2,weekday].set_xlabel('Zeit [h]')
-                axs[2,weekday].set_xticks(np.arange(0,108, step=12),np.arange(0,25, step=3))
-                axs[2,weekday].grid()
-            """
+            
             axs[0].plot(this_df_mean)
             axs[0].set_title('Mittelwert im Tagesverlauf am Tag ' + dict_weekday[weekday])
             axs[0].legend(['Winter','Übergangszeit','Sommer'],bbox_to_anchor=(1,1))

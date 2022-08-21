@@ -1,5 +1,4 @@
 ###IMPORT
-from struct import pack
 import numpy as np
 import pandas as pd
 import seaborn as sns
@@ -55,9 +54,6 @@ class StochasticLoadModel:
         if self.bool_dynamic_gmm:
             gmm = list()
             for timestep in range(0,96):
-                #if timestep == 40:
-                #    new_gmm, _ = calc_gaussian_mixture(data_for_simulation.iloc[timestep].to_numpy(),4,plots=True)
-                #else:
                 new_gmm, _ = calc_gaussian_mixture(data_for_simulation.iloc[timestep].to_numpy(),4)
                 gmm.insert(len(gmm),new_gmm)
         else:
@@ -142,6 +138,15 @@ class StochasticLoadModel:
         else:
             case_4 = new_case_4
 
+        if energy != 0:
+            case_denorm = 0
+            print('Gewuenschte Jahresenergie: ', str(energy))
+        elif max_value != 0:
+            case_denorm = 1
+            print('Gewuenschte Maximalleistung: ', str(max_value))
+        else:
+            print('Error!')
+
         n_runs = result.n_runs
         n_steps_total = self.n_days*self.n_steps
 
@@ -168,18 +173,11 @@ class StochasticLoadModel:
 
         factors_weekday     = self.rescale_parameters[8]
         std_weekday     = self.rescale_parameters[9]
-
-        #factors_weekdays_0  = self.rescale_parameters[8][0]
-        #factors_weekdays_1  = self.rescale_parameters[8][1]
-        #factors_weekdays_2  = self.rescale_parameters[8][2]
         
         example_year = pd.read_excel('resources/bspjahr.xlsx')
 
-        #print('Normierung:', case_1, ', Lokal/Global:', case_2, ', Grenzen:', case_3)
         extended_matrix=np.zeros([self.n_days*self.n_steps,n_runs])
         p_bar = energy_per_year/(self.n_days*24)
-
-        print('Gewuenschte Jahresenergie: ', str(energy_per_year), ', resultierende mittlere Jahresleistung:', str(p_bar))
 
         scaled_wide_matrix = np.zeros([self.n_days,self.n_steps])
         scaled_bins=np.zeros([self.n_days,self.n_states+1])
@@ -231,17 +229,21 @@ class StochasticLoadModel:
                             scaled_wide_matrix[day,:]=factor_of_the_day*max_vec[day]*wide_matrix[day,:]
                     extended_matrix[:,it]=np.reshape(scaled_wide_matrix,n_steps_total)
             elif case_2 == 1:
-                for it in range(0,n_runs):
-                    if case_4 == 4:
+                if case_denorm == 0:
+                    extended_matrix = simulation_matrix
+                else:
+                    if case_4 == 4:    
                         extended_matrix = max_value*simulation_matrix
-                    elif case_4 == 5:
-                        wide_matrix=np.reshape(simulation_matrix[:,it],[self.n_days,self.n_steps])
-                        for day in range(0,self.n_days):
-                            this_energy = np.mean(wide_matrix[day,:])
-                            scaled_wide_matrix[day,:]=mean_vec[day]*wide_matrix[day,:]/this_energy
-                        extended_matrix[:,it]=np.reshape(scaled_wide_matrix,n_steps_total)
                     else:
-                        extended_matrix = extreme_values_data[2]*simulation_matrix
+                        for it in range(0,n_runs):
+                            if case_4 == 5:
+                                wide_matrix=np.reshape(simulation_matrix[:,it],[self.n_days,self.n_steps])
+                                for day in range(0,self.n_days):
+                                    this_energy = np.mean(wide_matrix[day,:])
+                                    scaled_wide_matrix[day,:]=mean_vec[day]*wide_matrix[day,:]/this_energy
+                                extended_matrix[:,it]=np.reshape(scaled_wide_matrix,n_steps_total)
+                            else:
+                                extended_matrix = extreme_values_data[2]*simulation_matrix
         else:
             #z-Score
             extended_matrix=np.zeros([self.n_days*self.n_steps,self.n_runs])
@@ -251,9 +253,11 @@ class StochasticLoadModel:
                 scaled_wide_matrix = np.zeros([self.n_days,self.n_steps])
                 extended_matrix[:,it]=np.reshape(scaled_wide_matrix,n_steps_total)
 
-        if energy != 0:
+        if case_denorm == 0:
             for it in range(0,n_runs):
                 energy_of_the_iteration = calc_energy(extended_matrix[:,it])
+                print(extended_matrix[:,it])
+                print(energy_of_the_iteration)
                 extended_matrix[:,it] = extended_matrix[:,it]*energy/energy_of_the_iteration
 
         denormalized_result = StochasticSimulationResult(self, extended_matrix, scaled_bins, n_runs, normed = False)
@@ -336,11 +340,8 @@ class StochasticSimulationResult:
         mean_mean_simulation=np.mean(simulation_mean,axis=1)
         mean_std_simulation=np.mean(simulation_std,axis=1)
         mean_max_simulation=np.mean(simulation_max,axis=0)
-        mean_min_simulation=np.mean(simulation_min,axis=0)
-        mean_meanstrich_simulation=np.mean(simulation_meanstrich,axis=0)
         max_max_simu=np.max(simulation_max)
 
-        #print(mean_mean_simulation.shape)
 
         MAPE_mean = 1/n_steps*(np.sum(np.abs(mean_mean_simulation-mean_messdaten)/mean_messdaten))*100
         MAPE_std = 1/n_steps*(np.sum(np.abs(mean_std_simulation-std_messdaten)/std_messdaten))*100
@@ -349,7 +350,6 @@ class StochasticSimulationResult:
         print('MAPE von mean = ', MAPE_mean, '% , MAPE von std = ', MAPE_std, '%')
         print('MAX Sim = ', np.mean(mean_max_simulation), ', MAX Mess = ', mean_max_messdaten, ', Abs Delta =', np.abs(np.mean(mean_max_simulation)-mean_max_messdaten)/mean_max_messdaten*100)
 
-        #simulation_mean_year=np.mean(simulation_matrix,axis=1)
         all_sim_data=list()
         for k in range(0,n_runs):
             all_sim_data.insert(len(all_sim_data),np.reshape(simulation_matrix[:,k],[365,96]))
@@ -385,7 +385,6 @@ class StochasticSimulationResult:
             ax1.plot(simulation_mean[:,0],color='tab:blue')
             ax1.plot(np.max(tages_messdaten,axis=0),color='tab:orange',linestyle='dashed')
             ax1.plot(simulation_max_pro_Zeit[:,0],color='tab:blue',linestyle='dashed')
-            #ax1.legend(['Messdaten (MW)','Simulation (MW)','Messdaten (MAX)','Simulation (MAX)'])
             ax1.set_title('Ein Simulationslauf')
             ax1.set_ylabel(label_leistung)
             ax1.grid()
@@ -404,28 +403,7 @@ class StochasticSimulationResult:
             ax2.set_xticks(np.arange(0,108, step=12),np.arange(0,25, step=3))
             ax2.legend(['Messdaten (MW)','Simulation (MW)','Messdaten (MAX)','Simulation (MAX)'],loc='center left', bbox_to_anchor=(1, 0.5))
 
-            """
-            ax2.plot(np.mean(simulation_std,axis=1))
-            ax2.plot(np.std(tages_messdaten,axis=0))
-            ax2.legend(['Simulation','Messdaten'])
-            ax2.set_title('Standardabweichung')
-            ax2.set_ylabel(label_leistung)
-            ax2.grid()
-            ax2.set_xlabel('Zeit [h]')
-            ax2.set_xticks(np.arange(0,108, step=12),np.arange(0,25, step=3))
-            """
-
-            """
-            ax3.plot(np.max(tages_messdaten,axis=0),linewidth=3,color='orange')
-            ax3.plot(max_max_simulation,alpha=0.9,linewidth=0.5,color='blue')
-            ax3.plot(np.max(tages_messdaten,axis=0),linewidth=3,color='orange')
-            ax3.legend(['Messdaten','Simulation'])
-            ax3.set_title('Mittelwert')
-            ax3.set_ylabel(label_leistung)
-            ax3.grid()
-            ax3.set_xlabel('Zeit [h]')
-            ax3.set_xticks(np.arange(0,108, step=12),np.arange(0,25, step=3))
-            """
+            
             if export_plots:
                 plt.savefig(directory_export + 'Tagesverlauf_MAX_MW_STD_Alle_' + filename_plots + '.pdf', bbox_inches='tight')
             
@@ -453,17 +431,7 @@ class StochasticSimulationResult:
             ax2.grid()
             ax2.set_xlabel('Zeit [h]')
             ax2.set_xticks(np.arange(0,108, step=12),np.arange(0,25, step=3))
-            """
-            ax3.plot(np.max(tages_messdaten,axis=0),linewidth=3,color='orange')
-            ax3.plot(max_max_simulation,alpha=0.9,linewidth=0.5,color='blue')
-            ax3.plot(np.max(tages_messdaten,axis=0),linewidth=3,color='orange')
-            ax3.legend(['Messdaten','Simulation'])
-            ax3.set_title('Mittelwert')
-            ax3.set_ylabel(label_leistung)
-            ax3.grid()
-            ax3.set_xlabel('Zeit [h]')
-            ax3.set_xticks(np.arange(0,108, step=12),np.arange(0,25, step=3))
-            """
+            
             if export_plots:
                 plt.savefig(directory_export + 'Tagesverlauf_MW_STD_Alle_' + filename_plots + '.pdf', bbox_inches='tight')
 
@@ -472,9 +440,6 @@ class StochasticSimulationResult:
         for k in range(0,n_runs):
             sim_data=all_sim_data[k]
             sim_data_long=simulation_matrix[:,k]
-
-            #whole_MPE=np.sum(np.abs(sim_data_long-messdaten)/sim_data_long)*100/35040
-            #print('MPE im Jahr = ', whole_MPE)
 
             tages_simulation=np.reshape(sim_data,[365,96])
 
@@ -488,15 +453,11 @@ class StochasticSimulationResult:
             YM = pd.DataFrame(tages_messdaten).max(axis=1).to_numpy()
 
             sim_jahresenergie, sim_verbrauch=calc_daily_energy(sim_data_long)
-            #print('Jahresenergie [kWh]: Messdaten =', mess_verbrauch, ', Simulation =', sim_verbrauch, ', Differenz in Prozent =', np.abs(mess_verbrauch-sim_verbrauch)/sim_verbrauch*100)
             
-            #print('Jahresenergieverbrauch der Simulation:', sim_verbrauch, ' kWh')
-
             statistics_energy[k] = [sim_verbrauch]
 
             differenz_energy=np.abs(mess_jahresenergie-sim_jahresenergie)
             MPE_Energy=differenz_energy/sim_jahresenergie*100
-            #df_statistics=pd.DataFrame(MPE_Energy,columns=['Energie MPE']).describe()
             
             daily_MPE=np.zeros(365)
             daily_MPE_mean=np.zeros(365)
@@ -552,14 +513,7 @@ class StochasticSimulationResult:
                     max_power = max(np.max(reference_data), np.max(sim_data))+10
                     min_power = min(np.min(reference_data), np.min(sim_data))-10
             
-                """
-                plt.figure()
-                plt.plot(simulation_mean,label='Simulation')
-                plt.title('Mittelwert der Leistung pro Tag nach Simulation')
-                plt.xlabel('Zeitschritt in 15 Minuten')
-                plt.ylabel('Leistung [kW]')
-                """
-
+                
                 ####Leistungen fuer jeden Zeitschritt im ganzen Jahr
 
                 plt.rcParams.update({
@@ -573,7 +527,10 @@ class StochasticSimulationResult:
                 plt.xticks(np.arange(0,35040,1920),np.arange(0,366,20)+1)
                 plt.xlabel('Tag im Jahr')
                 plt.xlim([0,35040])
-                #plt.xticks(np.arange(0,35040, step=384),np.arange(0,365, step=4))
+                plt.axvline(x=7584,color='black', linestyle='dashed')
+                plt.axvline(x=12864,color='black', linestyle='dashed')
+                plt.axvline(x=24672,color='black', linestyle='dashed')
+                plt.axvline(x=29184,color='black', linestyle='dashed')
                 plt.title('Simulierte Leistung über ein Jahr')
                 if export_plots:
                     plt.savefig(directory_export + 'Jahreslastgang_Simulation_' + filename_plots + '.pdf', bbox_inches='tight')
@@ -658,32 +615,7 @@ class StochasticSimulationResult:
                 if export_plots:
                     plt.savefig(directory_export + 'Tagesverlauf_Boxplot_' + filename_plots + '.pdf', bbox_inches='tight')
 
-                ###Punktwolke vom Tagesverlauf
-
-                subfig, (ax1,ax2) = plt.subplots(1, 2,figsize=(14.4,4.8))
-                ax1.plot(tages_messdaten.T,linewidth=0.5,color='gray')
-                ax1.plot(np.mean(tages_messdaten,axis=0),linewidth=3,linestyle='--',color='black')
-                ax1.plot(np.mean(tages_messdaten,axis=0)+np.std(tages_messdaten,axis=0),linewidth=3,color='black')
-                ax1.plot(np.mean(tages_messdaten,axis=0)-np.std(tages_messdaten,axis=0),linewidth=3,color='black')
-                ax1.set_xlabel('Zeitschritt in 15 Minuten')
-                ax1.set_ylabel(label_leistung)
-                ax1.set_title('Messdaten als Wolke')
-                ax1.set_ylim([min_power,max_power])
-                ax1.set_xlabel('Zeit [h]')
-                ax1.set_xticks(np.arange(0,108, step=12),np.arange(0,25, step=3))
-
-
-                ax2.plot(np.reshape(simulation_matrix[:,0],[365,96]).T,linewidth=0.5,color='gray')
-                ax2.plot(np.mean(tages_messdaten,axis=0),linewidth=3,linestyle='--',color='black')
-                ax2.plot(np.mean(tages_messdaten,axis=0)+np.std(tages_messdaten,axis=0),linewidth=3,color='black')
-                ax2.plot(np.mean(tages_messdaten,axis=0)-np.std(tages_messdaten,axis=0),linewidth=3,color='black')
-                ax2.set_xlabel('Zeitschritt in 15 Minuten')
-                ax2.set_ylabel(label_leistung)
-                ax2.set_title('Mittelwertsband mit Simulationen')
-                ax2.set_ylim([min_power,max_power])
-                ax2.set_xlabel('Zeit [h]')
-                ax2.set_xticks(np.arange(0,108, step=12),np.arange(0,25, step=3))
-
+                
                 if random_plots:
                     zufallstag=np.random.randint(0,365)
                     anzahl_zufall = 5
@@ -700,21 +632,6 @@ class StochasticSimulationResult:
                         #print(hf.MPE(tages_messdaten[zufallstag],tages_simulation[zufallstag]))
                         plt.title(titel)
                 
-                """
-                plt.figure()    
-                plt.plot(MPE_Energy)
-                plt.title('MPE der Energie')
-                plt.xlabel('Tag im Jahr')
-                plt.ylabel('Energie [%]')
-                """
-                """
-                plt.figure()    
-                plt.plot(daily_abstand_mean,label='Abstand')
-                plt.plot(diff_bins,label='Groesse States')
-                plt.xlabel('Tag im Jahr')
-                plt.ylabel('Unnormierter Abstand')
-                """
-
                 subfig, (ax1,ax2,ax3) = plt.subplots(1, 3,figsize=(19.2,4.8))
                 ax1.plot(np.min(tages_simulation,axis=1),label='Simulation')
                 ax1.plot(np.min(tages_messdaten,axis=1),label='Messdaten')
@@ -737,34 +654,8 @@ class StochasticSimulationResult:
                 ax3.set_ylabel(label_leistung)
                 ax3.set_title('Maximale Leistung pro Tag')
 
-                """
-                subfig, (ax1,ax2,ax3) = plt.subplots(1, 3,figsize=(19.2,4.8))
-                ax1.boxplot([np.min(tages_simulation,axis=1),np.min(tages_messdaten,axis=1)],labels=['Simulation','Messdaten'])
-                ax1.set_xlabel('Tag im Jahr')
-                ax1.set_title('Minimale Leistung pro Tag')
-                ax1.set_ylabel(label_leistung)
-
-                ax2.boxplot([np.mean(tages_simulation,axis=1),np.mean(tages_messdaten,axis=1)],labels=['Simulation','Messdaten'])
-                ax2.set_xlabel('Tag im Jahr')
-                ax2.set_ylabel(label_leistung)
-                ax2.set_title('Mittlere Leistung pro Tag')
-
-                ax3.boxplot([np.max(tages_simulation,axis=1),np.max(tages_messdaten,axis=1)],labels=['Simulation','Messdaten'])
-                ax3.set_xlabel('Tag im Jahr')
-                ax3.set_ylabel(label_leistung)
-                ax3.set_title('Maximale Leistung pro Tag')
-                """
-
-                ######
-
-                plt.figure()
-                sns.boxplot(data=[[reference_data],[sim_data_long]])
-
-                descr_sim=pd.DataFrame(reference_data).describe()
-                descr_mess=pd.DataFrame(sim_data_long).describe()
-
-
                 
+                ######
 
                 this_fig, this_ax=plt.subplots()
                 multiind=pd.MultiIndex.from_product([['Minimalwerte','Mittelwerte','Maximalwerte'],['Simulation','Messdaten']],names=['Groesse','Art'])
@@ -783,130 +674,20 @@ class StochasticSimulationResult:
                 ###Jahresdauerlinie maximale Leistung
 
                 plt.figure()
-                #plt.bar(XS,YS,alpha=0.5)
-                #plt.bar(XM,YM,alpha=0.5)
                 plt.scatter(XS,YS,label='Simulation',s=2)
                 plt.scatter(XM,YM,label='Messdaten',s=2)
-                #plt.title('Tägliche Maximalwerte absteigend sortiert')
                 plt.xlabel('Rang')
                 plt.ylabel(label_leistung)
                 plt.legend(['Simulation','Messdaten'])
                 
                 if export_plots:
                     plt.savefig(directory_export + 'Geordnete_Maximalleistungen_' + filename_plots + '.pdf', bbox_inches='tight')
-                """
-                ###Vgl rank
-                print(tages_messdaten.shape)
-                print(tages_simulation.shape)
-
-                tages_simulation_mat = {}
-                tages_messdaten_mat = {}
+     
                 
-                for season in range(0,3):
-                    for weekday in range(0,3):
-                        tages_simulation_mat[season,weekday] = np.zeros([1,96])
-                        tages_messdaten_mat[season,weekday] = np.zeros([1,96])
-                        count = 0
-                        for day in range(0,365):
-                            if bspjahr.loc[:,'Tag'].iloc[day] == weekday and bspjahr.loc[:,'Jahreszeit'].iloc[day] == season:
-                                row_n = tages_simulation_mat[season,weekday].shape[0] ##last row
-                                row_n2 = tages_messdaten_mat[season,weekday].shape[0] ##last row
-                                if count == 0:
-                                    tages_simulation_mat[season,weekday][0,:] = tages_simulation[day,:]
-                                    tages_messdaten_mat[season,weekday][0,:] = tages_messdaten[day,:]
-                                    count = count +1
-                                else:
-                                    tages_simulation_mat[season,weekday] = np.insert(tages_simulation_mat[season,weekday] ,row_n,[tages_simulation[day,:]],axis= 0)
-                                    tages_messdaten_mat[season,weekday] = np.insert(tages_messdaten_mat[season,weekday] ,row_n2,[tages_messdaten[day,:]],axis= 0)
-                ranks_mat = {}
-                for season in range(0,3):
-                    for weekday in range(0,3):
-                        XS = pd.DataFrame(tages_simulation_mat[season,weekday]).max(axis=1).rank(method='first').to_numpy()
-                        XM = pd.DataFrame(tages_messdaten_mat[season,weekday]).max(axis=1).rank(method='first').to_numpy()
-                        YS = pd.DataFrame(tages_simulation_mat[season,weekday]).max(axis=1).to_numpy()
-                        YM = pd.DataFrame(tages_messdaten_mat[season,weekday]).max(axis=1).to_numpy()
-                        plt.figure()
-                        plt.scatter(XS,YS)
-                        plt.scatter(XM,YM)
-                        anzahl = tages_simulation_mat[season,weekday].shape[0]
-                        mapes_by_rank = np.zeros(anzahl)
-                        vgl = np.zeros([2,anzahl])
-                        for dayrank in range(0,anzahl):
-                            ind_sim = 0
-                            ind_mess = 0
-                            while round(XS[ind_sim]) != dayrank+1 and ind_sim<=anzahl-1:
-                                ind_sim = ind_sim+1
-                            while round(XM[ind_mess]) != dayrank+1 and ind_mess<=anzahl-1:
-                                ind_mess = ind_mess+1
-                            vgl[0,dayrank] = ind_sim
-                            vgl[1,dayrank] = ind_mess
-                            this_abs_diff = np.abs(tages_messdaten_mat[season,weekday][ind_mess,:]-tages_simulation_mat[season,weekday][ind_sim,:])
-                            mapes_by_rank[dayrank] = 1/96*np.sum(this_abs_diff/tages_messdaten_mat[season,weekday][ind_mess,:])*100
-                        ranks_mat[season,weekday] = mapes_by_rank
-
-                
-                        plt.figure()
-                        plt.boxplot(ranks_mat[season,weekday])
-
-                        maxday = np.argmax(mapes_by_rank)
-                        maxwert = np.max(mapes_by_rank)
-
-                        zufallstag=0
-                        zufallstag1=int(vgl[0,maxday])
-                        zufallstag2=int(vgl[1,maxday])
-
-                        subfig, (ax1,ax2) = plt.subplots(1, 2,figsize=(19.2,4.8))
-
-                        ax1.plot(tages_simulation_mat[season,weekday][zufallstag1,:])
-                        ax1.plot(tages_messdaten_mat[season,weekday][zufallstag2,:])
-                        ax1.set_ylabel(label_leistung)
-                        ax1.legend(['Simulation','Messdaten'])
-                        if normed_analysis:
-                            titel='Maximaler Jahres-MPE an ' + str(zufallstag) +  ' MPE = ' + str("%1.2f"% maxwert)            
-                        else:
-                            titel='Maximaler Jahres-MPE an ' + str(zufallstag) +  ' MPE = ' + str("%1.2f"% maxwert) + '%'
-                            ax1.set_title(titel)
-                        ax1.set_xlabel('Zeit [h]')
-                        ax1.set_xticks(np.arange(0,108, step=12),np.arange(0,25, step=3))
-                        ax1.grid()
-
-                        minday = np.argmin(mapes_by_rank)
-                        minwert = np.min(mapes_by_rank)
-
-                        zufallstag1=int(vgl[0,minday])
-                        zufallstag2=int(vgl[1,minday])
-
-                        #print(zufallstag1, ',', zufallstag2)
-                        
-                        ax2.plot(tages_simulation_mat[season,weekday][zufallstag1,:])
-                        ax2.plot(tages_messdaten_mat[season,weekday][zufallstag2,:])
-                        ax2.set_ylabel(label_leistung)
-                        ax2.legend(['Simulation','Messdaten'])
-                        if normed_analysis:
-                            titel='Minimaler Jahres-MPE an ' + str(zufallstag) +  ' MPE = ' + str("%1.2f"% minwert)            
-                        else:
-                            titel='Minimaler Jahres-MPE an ' + str(zufallstag) +  ' MPE = ' + str("%1.2f"% minwert) + '%'
-                        ax2.set_title(titel)
-                        ax2.set_xlabel('Zeit [h]')
-                        ax2.set_xticks(np.arange(0,108, step=12),np.arange(0,25, step=3))
-                        ax2.grid()
-
-                all_mapes=ranks_mat[0,0]
-                for season in range(0,3):
-                    for weekday in range(0,3):
-                        if season+weekday != 0:
-                            all_mapes=np.insert(all_mapes,all_mapes.shape[0],ranks_mat[season,weekday], axis=0)
-
-                plt.figure()
-                plt.boxplot(all_mapes)
-                plt.title('All')
-
-                display(pd.DataFrame(all_mapes).describe())
-                """
                 ######
                 
                 plt.rcParams.update({
-                    "font.size": '24'
+                    "font.size": '20'
                 })
 
                 subfig, axs = plt.subplots(1, 3,figsize=(19.2,4.8))
@@ -947,46 +728,6 @@ class StochasticSimulationResult:
                 if export_plots:
                     plt.savefig(directory_export + 'Histogramm_Min_Max_MW_' + filename_plots + '.pdf', bbox_inches='tight')
                 
-                plt.rcParams.update({
-                    "font.size": '16'
-                })
-                """
-                subfig, axs = plt.subplots(2, 3,figsize=(19.2,9.6))
-                axs[0,0].hist(np.min(tages_simulation,axis=1),bins=50,density=True,alpha=0.3)
-                axs[0,0].hist(np.min(tages_messdaten,axis=1),bins=50,density=True,alpha=0.3)
-                axs[0,0].set_title('Minimale Leistung pro Tag')
-                axs[0,0].legend(['Simulation','Messdaten'])
-
-                axs[0,1].hist(np.mean(tages_simulation,axis=1),bins=50,density=True,alpha=0.3)
-                axs[0,1].hist(np.mean(tages_messdaten,axis=1),bins=50,density=True,alpha=0.3)
-                axs[0,1].set_title('Mittlere Leistung pro Tag')
-
-                axs[0,2].hist(np.max(tages_simulation,axis=1),bins=50,density=True)
-                axs[0,2].hist(np.max(tages_messdaten,axis=1),bins=50,density=True)
-                axs[0,2].set_title('Maximale Leistung pro Tag')
-
-                maxprob=np.zeros([2,3])
-                minprob=np.zeros([2,3])
-
-                for i in [0,1]:
-                    for j in [0,1,2]:
-                        minprob[i,j], maxprob[i,j]=axs[i,j].get_ylim()
-
-                maxmaxprob=np.max(maxprob)
-                minminprob=np.min(minprob)
-
-                for i in range(0,2):
-                    for j in range(0,3):
-                        axs[i,j].set_xlim([min_power, max_power])
-                        axs[i,j].set_ylim([minminprob,maxmaxprob])
-
-                axs[1,0].set_xlabel(label_leistung)
-                axs[1,1].set_xlabel(label_leistung)
-                axs[1,2].set_xlabel(label_leistung)
-                axs[0,0].set_ylabel('Relative Häufigkeit')
-                axs[1,0].set_ylabel('Relative Häufigkeit')
-                """
-
                 subfig, axs = plt.subplots(1, 2,figsize=(14.4,4.8))
                 nr=0
                 axs[nr].hist(simulation_matrix[:,k],bins=100,density=True)
@@ -1017,60 +758,6 @@ class StochasticSimulationResult:
 
                 ######
 
-                """
-                plt.figure()
-                plt.plot(daily_MPE)
-                plt.title('Täglicher MPE in Prozent')
-                plt.xlabel('Tag im Jahr')
-                """
-
-                ######
-
-                """
-                subfig, (ax1,ax2,ax3) = plt.subplots(1, 3,figsize=(24,4.8))
-
-                ax1.plot(daily_MPE_min)
-                ax1.set_title('Täglicher MPE der minimalen Leistung')
-                ax1.set_ylabel('MPE [%]')
-                ax1.set_xlabel('Tag im Jahr')
-
-                ax2.plot(daily_MPE_mean)
-                ax2.set_title('Täglicher MPE der mittleren Leistung')
-                ax2.set_ylabel('MPE [%]')
-                ax2.set_xlabel('Tag im Jahr')
-
-                ax3.plot(daily_MPE_max)
-                ax3.set_title('Täglicher MPE der maximalen Leistung')
-                ax3.set_ylabel('MPE [%]')
-                ax3.set_xlabel('Tag im Jahr')
-
-                """
-
-                """
-
-                plt.figure()
-                plt.hist(daily_MPE,bins=100)
-                plt.title('Histogramm der MPEs der Leistung')
-
-                fig=fig+1
-                plt.figure(fig)
-                plt.plot(daily_MPE_max)
-                plt.title('Täglicher MPE der Maximalwerte in Prozent')
-                plt.xlabel('Tag im Jahr')
-
-                fig=fig+1
-                plt.figure(fig)
-                plt.plot(daily_MPE_min)
-                plt.title('Täglicher MPE der Minimalwerte in Prozent')
-                plt.xlabel('Tag im Jahr')
-                """
-                
-                #####
-                
-                plt.rcParams.update({
-                    "font.size": '24'
-                })
-
                 subfig, (ax1,ax2) = plt.subplots(1, 2,figsize=(24,4.8))
                 
                 if normed_analysis:
@@ -1092,10 +779,6 @@ class StochasticSimulationResult:
                 
                 if export_plots:
                     plt.savefig(directory_export + 'Boxplot_MAPE_Min_Max_MW_' + filename_plots + '.pdf', bbox_inches='tight')
-
-                plt.rcParams.update({
-                    "font.size": '16'
-                })
 
                 ###Maximaler und minimaler MAPE pro Jahr
 
@@ -1130,23 +813,7 @@ class StochasticSimulationResult:
                 ax2.grid()
 
                 ######
-
-                subfig, axs = plt.subplots(1, 2, figsize=(12.8, 4.8))
-
-                maxwert=np.max([np.max(tages_simulation),np.max(tages_messdaten)])
-                minwert=np.min([np.min(tages_simulation),np.min(tages_messdaten)])
-
-                sns.heatmap(tages_simulation,vmin=minwert,vmax=maxwert,ax=axs[0],cbar_kws={'label': label_leistung}).set(title='Simulation')
-                axs[0].set_xticks(np.arange(0,108, step=12),np.arange(0,25, step=3))
-                axs[0].set_xlabel('Zeit am Tag [h]')
-                axs[0].set_ylabel('Tag im Jahr')
-
-                sns.heatmap(tages_messdaten,vmin=minwert,vmax=maxwert,ax=axs[1],cbar_kws={'label': label_leistung}).set(title='Messdaten')
-                axs[1].set_xticks(np.arange(0,108, step=12),np.arange(0,25, step=3))
-                axs[1].set_xlabel('Zeit am Tag [h]')
-
-                if export_plots:
-                    plt.savefig(directory_export + 'Heatmap_Simulation_Messdaten_' + filename_plots + '.pdf', bbox_inches='tight')
+                
 
 
         if show_tables:
@@ -1162,9 +829,6 @@ class StochasticSimulationResult:
             display(statistics_describe_max_vz)
             print('MPE der Minimalleistung mit Vorzeichen:')
             display(statistics_describe_min_vz)
-            #print('Maximaler minimaler MPE = ', statistics_describe.max(axis=1)['min'])
-            #print('Minimaler maximaler MPE = ', statistics_describe.min(axis=1)['max'])
-            #print('Mittlerer MPE = ', statistics_describe.mean(axis=1)['mean'])
             display(statistics_index)
             display(statistics_energy)
 

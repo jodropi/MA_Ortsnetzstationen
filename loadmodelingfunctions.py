@@ -55,8 +55,6 @@ def calc_regression_polynoms(data_in,data_weekday_in,deg,case_normierung,plots=F
     else:
         data=data_in
 
-    #display(data)
-
     if isinstance(data_weekday_in, np.ndarray):
         data_w=pd.DataFrame(data_weekday_in)
     else:
@@ -76,19 +74,8 @@ def calc_regression_polynoms(data_in,data_weekday_in,deg,case_normierung,plots=F
     reg_poly_max=np.polyfit(X,Ymax,deg)
     mymodel_max=np.poly1d(reg_poly_max)
 
-
-    #Ymaxmean=np.mean(Ymax)
-    #Yminmean=np.mean(Ymax)
-    #Ymin=data.min().to_numpy()/data.min().min()
-    #Ymean=data.mean().to_numpy()/data.mean().mean()
-    #Ymax=data.max().to_numpy()/data.max().max()
-    
-    #Y_faktor_max=data.max().to_numpy()/data.mean().to_numpy()
-    #Y_faktor_min=data.min().to_numpy()/data.mean().to_numpy()
-
     min_vec  = Ymin
     mean_vec = Ymean
-    #max_vec  = Ymax
     max_vec = mymodel_max(X)
     std_vec  = Ystd
 
@@ -103,20 +90,10 @@ def calc_regression_polynoms(data_in,data_weekday_in,deg,case_normierung,plots=F
         max_vec=Y_faktor_max
         min_vec=Y_faktor_min
 
-    """
-    plt.figure()
-    plt.hist(Y_faktor_max,bins=50)
-    plt.figure()
-    plt.hist(Y_faktor_min,bins=50)
-    plt.figure()
-    plt.hist(Y_faktor_delta,bins=50)
-    """
-
     c_max = np.mean(Y_faktor_max)
     c_min = np.mean(Y_faktor_min)
     c_mean = 1
 
-    #std_max = np.std(Y_faktor_max)
     std_min = np.std(Y_faktor_min)
     std_mean = 1
 
@@ -147,13 +124,11 @@ def calc_regression_polynoms(data_in,data_weekday_in,deg,case_normierung,plots=F
         
         plt.figure()
         plt.plot(Y_faktor_max)
-        #plt.plot(X,mymodel_c_max(X),color='red')
         plt.title('Sklaierungsfaktor c_max=P_max/P_mw')
         plt.suptitle('mean =' + str(np.mean(Y_faktor_max)) + ', std =' + str(np.std(Y_faktor_max)))
 
         plt.figure()
         plt.plot(Y_faktor_min)
-        #plt.plot(X,mymodel_c_min(X),color='red')
         plt.title('Sklaierungsfaktor c_min=P_min/P_mw')
         plt.suptitle('mean =' + str(np.mean(Y_faktor_min)) + ', std =' + str(np.std(Y_faktor_min)))
         
@@ -185,19 +160,7 @@ def calc_regression_polynoms(data_in,data_weekday_in,deg,case_normierung,plots=F
         for weekday in range(0,3):
             factors_weekdays[season,weekday] = E_mat[season,weekday]/E_mean_season[season]
             std_weekdays[season,weekday] = E_mat_std[season,weekday]/E_mean_season[season]
-    """
-    E_0=0.25*data_w.loc[:,0].sum(axis=0).mean()
-    E_1=0.25*data_w.loc[:,1].sum(axis=0).mean()
-    E_2=0.25*data_w.loc[:,2].sum(axis=0).mean()
-    E_mean=0.25*data_w.sum(axis=0).mean()
-
-    factors_0=E_0/E_mean
-    factors_1=E_1/E_mean
-    factors_2=E_2/E_mean
-
-    factors_weekdays=[factors_0,factors_1,factors_2]
-    """
-
+    
     return energy_per_year, c_factors, extreme_vec, std_factors, std_vec, true_values, factors_weekdays, std_weekdays
 
 def calc_gaussian_mixture(df,n_comp,n_bins=50,plots=False):
@@ -227,39 +190,9 @@ def calc_gaussian_mixture(df,n_comp,n_bins=50,plots=False):
         plt.plot(x, p, 'k', linewidth=2)
         plt.xlabel('Normierte Leistung')
         plt.ylabel('Häufigkeit')
-        #plt.xlim([0,1])
-        """
-        datamax=np.max(data)
-        datamin=np.min(data)
-        grenzen = np.linspace(datamin,datamax,11)
-        print(grenzen)
-        for grenze in range(0,11):
-            plt.axvline(x=grenzen[grenze],color='r')
-            if grenze <=9:
-                plt.text((grenzen[grenze+1]-grenzen[grenze])/2+grenzen[grenze], 10, str(grenze+1),horizontalalignment='center')
-        #plt.savefig('GMMHistogramm_d.pdf',bbox_inches='tight')
-        """
+        
         plt.figure(figsize=(9.6,4.8))
-        """
-        _, _, _ = plt.hist(data, bins=n_bins, density=True,color="lightblue")
-        xmin, xmax = plt.xlim()
-        print(xmin, xmax)
-        x = np.linspace(xmin, xmax, 100)
-        p=np.zeros(x.shape)
-        for j in range(0,n_comp):
-            p=p+gmm.weights_[j]*norm.pdf(x, gmm.means_[j][0], np.sqrt(gmm.covariances_[j][0]))
-        #plt.plot(x, p, 'k', linewidth=2)
-        plt.xlabel('Normierte Leistung')
-        plt.ylabel('Häufigkeit')
-        plt.xlim([0,1])
-        grenzen = np.linspace(0,1,11)
-        print(grenzen)
-        for grenze in range(0,11):
-            plt.axvline(x=grenzen[grenze],color='r')
-            if grenze <=9:
-                plt.text((grenzen[grenze+1]-grenzen[grenze])/2+grenzen[grenze], 10, str(grenze+1),horizontalalignment='center')
-        #plt.savefig('GMMHistogramm_s.pdf',bbox_inches='tight')
-        """
+        
 
     return gmm, p
 
@@ -280,7 +213,6 @@ def calc_random_gaussian_mixture(gmm,gmm_n_components,n):
     norm_params=np.reshape(norm_params,[gmm_n_components,2])
     
     weights = gmm.weights_
-    # A stream of indices from which to choose the component
     mixture_idx = np.random.choice(len(weights), size=n, replace=True, p=weights)
     y = np.fromiter((stats.norm.rvs(*(norm_params[i])) for i in mixture_idx), dtype=np.float64)
     
